@@ -1,0 +1,52 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@inject Dictionary<string, ProjectInfo>  ProjectInfos
+@inject NavigationManager NavigationManager
+@inject CurrentProject CurCurrentProject
+
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">NewLife.NetworkLog</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        @foreach (var projectInfo in ProjectInfos)
+        {
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="/" @onclick="() => { _ip = projectInfo.Value.IP;CurCurrentProject.ProjectInfo = projectInfo.Value; }"
+                         ActiveClass="@(projectInfo.Value.IP==_ip?"active":"")">
+                    <span class="oi oi-project" aria-hidden="true"></span> @(projectInfo.Value.Name)
+                </NavLink>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    bool _collapseNavMenu = true;
+    string NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
+
+    HubConnection _hubConnection;
+    string _ip = "";
+
+    void ToggleNavMenu()
+    {
+        _collapseNavMenu = !_collapseNavMenu;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/LogHub"))
+            .Build();
+
+        _hubConnection.On<string, ProjectLog>("ReceiveMessage", (remoteEP, log) =>
+        {
+            StateHasChanged();
+        });
+
+        await _hubConnection.StartAsync();
+    }
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Tables Version="9.17.7456.18658" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="http://www.newlifex.com http://www.newlifex.com/Model2020.xsd" NameSpace="NewLife.NetworkLog.Entities" ConnName="NewLife.NetworkLog" Output="" BaseClass="Entity" IgnoreNameCase="True" xmlns="http://www.newlifex.com/Model2020.xsd">
+  <Table Name="ProjectInfo" Description="项目信息" IgnoreNameCase="False" RenderGenEntity="True">
+    <Columns>
+      <Column Name="ID" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+      <Column Name="Name" DataType="String" Master="True" Description="名称" />
+      <Column Name="IP" DataType="String" Description="IP" />
+      <Column Name="AddTime" DataType="DateTime" Description="添加时间" />
+      <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" />
+    </Columns>
+    <Indexes>
+      <Index Columns="Name" Unique="True" />
+      <Index Columns="IP" Unique="True" />
+    </Indexes>
+  </Table>
+  <Table Name="ProjectLog" Description="项目日志" IgnoreNameCase="False" RenderGenEntity="True">
+    <Columns>
+      <Column Name="ID" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+      <Column Name="ProjectID" DataType="Int32" Master="True" Description="项目ID" />
+      <Column Name="Time" DataType="Int64" Description="时间戳(日志信息不包含时间，则插入当前时间)" />
+      <Column Name="ThreadID" DataType="Int32" Description="线程ID" />
+      <Column Name="ThreadType" Description="线程类型" Type="ThreadType" />
+      <Column Name="ThreadName" DataType="String" Description="线程名" />
+      <Column Name="Message" DataType="String" Description="内容" />
+    </Columns>
+    <Indexes>
+      <Index Columns="ProjectID" />
+      <Index Columns="Time" />
+      <Index Columns="ThreadName" />
+    </Indexes>
+  </Table>
+</Tables>

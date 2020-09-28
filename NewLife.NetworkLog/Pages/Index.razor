@@ -1,0 +1,162 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@using NewLife.Data
+@inject NavigationManager NavigationManager
+@inject CurrentProject CurCurrentProject
+
+<a href="#top"></a>
+<div class="top-row px-4">
+    <span class="m-2">当前总数：@_logs.Count</span>
+    <span class="m-2">当前页：@_page.PageIndex</span>
+    <span class="m-2">总页数：@_page.PageCount</span>
+    <input class="m-2" value="@KeyWord"
+           @onchange="@((ChangeEventArgs e) =>
+                      {
+                          KeyWord =
+                              e.Value.ToString();
+                          return Task.CompletedTask;
+                      })" />
+    @*<input type="datetime" />*@
+    <button class="btn-primary" @onclick="LoadData"> 搜索 </button>
+    <button class="btn-primary" @onclick="HomePage"> 首页 </button>
+    <button class="btn-primary" @onclick="LastPage"> 上一页 </button>
+    <button class="btn-primary" @onclick="NextPage"> 下一页 </button>
+    <label>
+        每页大小：
+        <Select value="@_page.PageSize"
+                @onchange="@((ChangeEventArgs e) =>
+                           {
+                               _page.PageSize =
+                                   e.Value.ToInt();
+                               return Task.CompletedTask;
+                           })">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </Select>
+    </label>
+    <button class="btn-primary" onclick="javascript:window.scrollTo(0, 0)"> 顶部 </button>
+    <button class="btn-primary" onclick="javascript:window.scrollTo(0, document.body.clientHeight)"> 底部 </button>
+
+    <button class="btn-primary" @onclick="Reset"> 重置 </button>
+</div>
+<div class="content px-4">
+    <div class="table">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>项目</th>
+                    <th>线程ID</th>
+                    <th>线程类型</th>
+                    <th>线程名</th>
+                    <th>内容</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in _logs)
+                {
+                    <tr>
+                        <td title="@log.DateTime.ToFullString()">@log.DateTime.ToString("HH:mm:ss.fff") </td>
+                        <td>@log.ProjectInfo.Name </td>
+                        <td>@log.ThreadID </td>
+                        <td>@log.ThreadType.GetDescription() </td>
+                        <td>@log.ThreadName </td>
+                        <td>@log.Message </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private HubConnection _hubConnection;
+    private IList<ProjectLog> _logs;
+    private PageParameter _page;
+    private string KeyWord { get; set; }
+    private DateTime? _start;
+    private DateTime? _end;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //forecasts = await ForecastService.GetForecastAsync(DateTime.Now);
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/LogHub"))
+            .Build();
+
+        _page = new PageParameter
+        {
+            PageIndex = 1,
+            PageSize = 10
+        };
+
+        // 加载数据
+        LoadData();
+
+        _hubConnection.On<string, ProjectLog>("ReceiveMessage", Handler);
+
+        await _hubConnection.StartAsync();
+    }
+
+    private void Handler(string remoteEP, ProjectLog log)
+    {
+        if (CurCurrentProject.ProjectInfo != null && CurCurrentProject.ProjectInfo.IP != remoteEP)
+        {
+            return;
+        }
+
+        _logs.Insert(0, log);
+
+        lock (_logs)
+        {
+            if (_logs.Count > _page.PageSize)
+            {
+                _logs.RemoveAt(_logs.Count - 1);
+            }
+        }
+
+        LoadData();
+        StateHasChanged();
+    }
+
+    private void LoadData()
+    {
+        _logs = ProjectLog.Search(_page, KeyWord, CurCurrentProject?.ProjectInfo?.ID, _start, _end);
+        StateHasChanged();
+    }
+
+    private void HomePage()
+    {
+        if (_page.PageIndex == 1) return;
+
+        _page.PageIndex = 1;
+        LoadData();
+    }
+
+    private void LastPage()
+    {
+        if (_page.PageIndex <= 1) return;
+        _page.PageIndex--;
+        LoadData();
+    }
+
+    private void NextPage()
+    {
+        if (_page.PageIndex >= _page.PageCount) return;
+
+        _page.PageIndex++;
+        LoadData();
+    }
+
+    private void Reset()
+    {
+        _page.PageIndex = 1;
+        _page.PageSize = 10;
+        _start = null;
+        _end = null;
+        KeyWord = null;
+        LoadData();
+    }
+}
